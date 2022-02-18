@@ -1,0 +1,112 @@
+{
+    "name": "Stanford LBRE Ontology",
+    "namespace": "Stanford\\LBRE",
+    "description": "This module provides site wide ontology lookup for Stanford's LBRE ",
+    "documentation": "README.md",
+    "authors": [
+        {
+            "name": "Jordan Schultz",
+            "email": "jmschult@stanford.edu",
+            "institution": "Stanford University"
+        }
+    ],
+    "framework-version": 8,
+    "permissions": [
+        "redcap_every_page_before_render",
+        "redcap_module_system_enable",
+        "redcap_every_page_top"
+    ],
+    "enable-every-page-hooks-on-system-pages": false,
+    "links": {
+        "project": [
+            {
+                "name": "TestLBRE",
+                "icon": "fas fa-cube",
+                "url": "pages/test.php",
+                "show-header-and-footer": true
+            }
+        ],
+        "control-center": [
+        ]
+    },
+    "system-settings": [
+        {
+            "key": "enable-system-debug-logging",
+            "name": "<b>Enable Debug Logging</b><br>If you have the Stanford emLogger external module installed and configured, you can enable additional debug-level logging through this checkbox.  Note that this will enable debugs for ALL Shazam projects.  You can alternatively enable it on a per-project basis by going that that project's Shazam EM configuration page",
+            "required": false,
+            "type": "checkbox"
+        },
+        {
+            "key": "auth-login",
+            "name": "<b>Login credential for the authorization server</b>",
+            "required": true,
+            "type": "text"
+        },
+        {
+            "key": "auth-password",
+            "name": "<b>Password credential for the authorization server</b>",
+            "required": true,
+            "type": "text"
+        }
+    ],
+    "project-settings": [
+        {
+            "key": "project-category-list",
+            "name": "List of Ontologies for the project",
+            "required": false,
+            "type": "sub_settings",
+            "repeatable":true,
+            "sub_settings":[
+                {
+                    "key": "project-category",
+                    "name": "Ontology Category",
+                    "required": true,
+                    "type": "text"
+                }
+            ]
+        },
+        {
+            "key": "bearer-token",
+            "name": "<b>Token generated from the authorization server</b>",
+            "required": false,
+            "type": "text"
+        },
+        {
+            "key": "bearer-expiration",
+            "name": "<b>Expiration time of bearer token</b>",
+            "required": false,
+            "type": "text"
+        },
+        {
+            "key": "server",
+            "name": "<b>Server</b>",
+            "required": true,
+            "type": "radio",
+            "default": "development",
+            "choices": [
+                {
+                    "value": "development",
+                    "name": "Development"
+                },
+                {
+                    "value": "uat",
+                    "name": "UAT"
+                },
+                {
+                    "value": "production",
+                    "name": "Production"
+                }
+            ]
+        },
+        {
+            "key": "enable-project-debug-logging",
+            "name": "<b>Enable Stanford emLogger Logging</b><br>If you have the Stanford emLogger external module installed and configured, you can enable additional debug-level logging for this project",
+            "required": false,
+            "type": "checkbox"
+        }
+    ],
+    "compatibility": {
+        "php-version-min": "5.4.0",
+        "redcap-version-min": "8.8.1"
+    }
+}
