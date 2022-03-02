@@ -8,9 +8,13 @@ class Client extends \GuzzleHttp\Client
 {
     private $enc_credentials;
 
-    public function __construct(array $config = ['Content-Type' => 'application/json'])
+    private $em;
+
+    public function __construct($em, array $config = ['Content-Type' => 'application/json'])
     {
         parent::__construct($config);
+
+        $this->setEm($em);
 
     }
 
@@ -23,6 +27,13 @@ class Client extends \GuzzleHttp\Client
 
     }
 
+    /**
+     * Sends a guzzle request
+     * @param $method
+     * @param $uri
+     * @param array $options
+     * @return mixed|string|void
+     */
     public function createRequest($method, $uri = '', array $options = []){
         try {
             $response = parent::request($method, $uri, $options);
@@ -39,9 +50,11 @@ class Client extends \GuzzleHttp\Client
             }
 
         } catch (\Exception $e) {
-            $this->emError($e->getMessage());
+            $this->getEm()->emError($e->getMessage());
+            $this->getEm()->exitAfterHook();
         } catch (GuzzleException $e) {
-            $this->emError($e->getMessage());
+            $this->getEm()->emError($e->getMessage());
+            $this->getEm()->exitAfterHook();
         }
     }
 
@@ -59,6 +72,22 @@ class Client extends \GuzzleHttp\Client
 
     public function getEncCredentials(){
         return $this->enc_credentials;
+    }
+
+    /**
+     * @return mixed
+     */
+    public function getEm()
+    {
+        return $this->em;
+    }
+
+    /**
+     * @param mixed $em
+     */
+    public function setEm($em): void
+    {
+        $this->em = $em;
     }
 
 }
