@@ -33,10 +33,7 @@ class LBRE extends AbstractExternalModule implements \OntologyProvider
 {
     use emLoggerTrait;
 
-    const DEV_URL = 'https://aswsdev.stanford.edu/LBRE/{}/v1';
-
     private $client;
-
 
     public function __construct()
     {
@@ -53,8 +50,11 @@ class LBRE extends AbstractExternalModule implements \OntologyProvider
 
     public function initialize()
     {
+
         try {
             $settings = $this->getSystemSettings();
+            $projectSettings = $this->getProjectSettings();
+
             if (!isset($settings['auth-login']) || !isset($settings['auth-password']))
                 throw new \Exception('Required authorization credentials not passed in EM settings');
 
@@ -64,8 +64,8 @@ class LBRE extends AbstractExternalModule implements \OntologyProvider
 
             // Generate
             $tokenJson = $client->generateBearerToken();
-            $this->setProjectSetting('bearer-token', $tokenJson['access_token']);
-            $this->setProjectSetting('bearer-expiration', strval(time() + $tokenJson['expires_in']));
+            $this->setSystemSetting('bearer-token', $tokenJson['access_token']);
+            $this->setSystemSetting('bearer-expiration', strval(time() + $tokenJson['expires_in']));
 
         } catch (\Exception $e) {
             $this->emError("Error: $e");
@@ -80,23 +80,15 @@ class LBRE extends AbstractExternalModule implements \OntologyProvider
     public function sendQuery($category, $search_term = "")
     {
         try {
-            $settings = $this->getProjectSettings();
             if (!isset($search_term))
                 throw new \Exception('No search term passed');
 
-            $term = urlencode(filter_var($search_term, FILTER_SANITIZE_STRING));
-
-            if (strtolower($category) === 'buildings')
-                $url = str_replace("{}", "locations", self::DEV_URL) . "?name=$term";
-            elseif (strtolower($category) === 'rooms')
-                $url = str_replace("{}", "rooms", self::DEV_URL) . "?srch1=$term";
-            else
-                throw new \Exception("EM must be configured using either location or room ontology, it is currently : $category");
+            $settings = $this->getSystemSettings();
 
             $conditions = [
-                !isset($settings['bearer-token']),
-                !isset($settings['bearer-expiration']),
-                time() > $settings['bearer-expiration']
+                !isset($settings['bearer-token']['value']),
+                !isset($settings['bearer-expiration']['value']),
+                time() > $settings['bearer-expiration']['value']
             ];
 
             if (array_search(true, $conditions)) //Reset bearer token if past expiration
@@ -106,10 +98,12 @@ class LBRE extends AbstractExternalModule implements \OntologyProvider
 
             $options = [
                 'headers' => [
-                    'Authorization' => $settings['bearer-token'],
+                    'Authorization' => $settings['bearer-token']['value'],
                     'Accept' => 'application/json'
                 ]
             ];
+
+            $url = $this->getQueryUrl($category, $search_term);
 
             return $client->createRequest("get", $url, $options);
 
@@ -117,6 +111,85 @@ class LBRE extends AbstractExternalModule implements \OntologyProvider
             $this->emError("Error: $e");
             $this->exitAfterHook();
         }
+    }
+
+    /**
+     * Generates API url based on system and project setting
+     * @param $category
+     * @param $search_term
+     * @return string
+     * @throws \Exception
+     */
+    public function getQueryUrl($category, $search_term)
+    {
+        $pSettings = $this->getProjectSettings();
+        $sSettings = $this->getSystemSettings();
+
+        switch ($pSettings['server']) {
+            case 'development':
+                $url = $sSettings['dev-url']['value'];
+                break;
+            case 'production':
+                $url = $sSettings['prod-url']['value'];
+                break;
+            case 'uat':
+                $url = $sSettings['uat-url']['value'];
+                break;
+            default:
+                $url = $sSettings['dev-url']['value'];
+                break;
+        }
+
+        if (!isset($url))
+            throw new \Exception('Empty url in system settings');
+//        $url = match ($pSettings['server']) {
+//            'production' => $pSettings['prod-url']['value'],
+//            'uat' => $pSettings['uat-url']['value'],
+//            default => $pSettings['dev-url']['value'],
+//        };
+        $term = urlencode(filter_var($search_term, FILTER_SANITIZE_STRING));
+
+        if (strtolower($category) === 'buildings') {
+            $url .= "locations/v1?srch1=$term";
+        } elseif (strtolower($category) === 'rooms') {
+            $filterBy = $this->parseSmartVariable();
+            if (isset($filterBy)) { // User wants to filter room by building ID
+                $record_data = json_decode(\REDCap::getData('json', null, $filterBy));
+                if (!empty($record_data)) { //Specific search by building
+                    $buildingId = $record_data[0]->$filterBy;
+                    $url .= "rooms/v1?srch1=$term&building=$buildingId";
+                } else { //Else regular search
+                    $url .= "rooms/v1?srch1=$term";
+                }
+            } else {
+                $url .= "rooms/v1?srch1=$term";
+            }
+
+        } else {
+            throw new \Exception("EM must be configured using either location or room ontology, it is currently : $category");
+        }
+
+        return $url;
+    }
+
+    /**
+     * @return string|null
+     */
+    public function parseSmartVariable()
+    {
+        global $Proj;
+        foreach ($Proj->metadata as $field) {
+            if ($field['field_name'] === $_GET['field'] && str_contains($field['misc'], "filterby=")) {
+                $output = preg_split('/[\s,\n\r]+/', $field['misc']);
+                $filterField = null;
+                foreach ($output as $action)
+                    if (str_contains($action, "filterby="))
+                        $filterField = explode("=", $action)[1];
+
+                return $filterField;
+            }
+        }
+        return null;
     }
 
     /**
@@ -139,10 +212,13 @@ class LBRE extends AbstractExternalModule implements \OntologyProvider
             }
         } elseif (strtolower($category) === 'rooms') {
             foreach ($res['buildings'] as $k) {
-                if ($k['roomStatus'] === 'INACTIVE' || $k['roomCategoryDesc'] === 'UNASSIGNABLE AREAS')
-                    continue;
+//                if ($k['roomStatus'] === 'INACTIVE' || $k['roomCategoryDesc'] === 'UNASSIGNABLE AREAS')
+//                    continue;
+                $partitions = explode("-", $k['roomID']);
+                $roomID = $partitions[count($partitions) - 1];
+
                 $temp = [
-                    'code' => $k['roomID'],
+                    'code' => $roomID,
                     'display' => $k['roomName'] ?? $k['roomTypeDesc'] . " - " . $k['roomCategoryDesc'],
                     'active' => 'true'
                 ];

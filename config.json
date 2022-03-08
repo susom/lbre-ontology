@@ -31,12 +31,6 @@
     },
     "system-settings": [
         {
-            "key": "enable-system-debug-logging",
-            "name": "<b>Enable Debug Logging</b><br>If you have the Stanford emLogger external module installed and configured, you can enable additional debug-level logging through this checkbox.  Note that this will enable debugs for ALL Shazam projects.  You can alternatively enable it on a per-project basis by going that that project's Shazam EM configuration page",
-            "required": false,
-            "type": "checkbox"
-        },
-        {
             "key": "auth-login",
             "name": "<b>Login credential for the authorization server</b>",
             "required": true,
@@ -47,23 +41,18 @@
             "name": "<b>Password credential for the authorization server</b>",
             "required": true,
             "type": "text"
-        }
-    ],
-    "project-settings": [
+        },
         {
-            "key": "project-category-list",
-            "name": "List of Ontologies for the project",
+            "key": "prod-login",
+            "name": "<b>Login credential for the authorization server if production is selected</b>",
             "required": false,
-            "type": "sub_settings",
-            "repeatable":true,
-            "sub_settings":[
-                {
-                    "key": "project-category",
-                    "name": "Ontology Category",
-                    "required": true,
-                    "type": "text"
-                }
-            ]
+            "type": "text"
+        },
+        {
+            "key": "prod-password",
+            "name": "<b>Password credential for the authorization server if production is selected</b>",
+            "required": false,
+            "type": "text"
         },
         {
             "key": "bearer-token",
@@ -78,8 +67,59 @@
             "type": "text"
         },
         {
+            "key": "prod-url",
+            "name": "<b>Production url for Stanford Location API</b><br><i>The URL to call when production mode is checked</i>",
+            "required": false,
+            "type": "text"
+        },
+        {
+            "key": "uat-url",
+            "name": "<b>UAT url for Stanford Location API</b><br><i>The URL to call when UAT mode is checked</i>",
+            "required": false,
+            "type": "text"
+        },
+        {
+            "key": "dev-url",
+            "name": "<b>DEV url for Stanford Location API</b><br><i>The URL to call when dev mode is checked</i>",
+            "required": true,
+            "type": "text"
+        },
+        {
+            "key": "enable-system-debug-logging",
+            "name": "<b>Enable Debug Logging</b><br>If you have the Stanford emLogger external module installed and configured, you can enable additional debug-level logging through this checkbox.  Note that this will enable debugs for ALL Shazam projects.  You can alternatively enable it on a per-project basis by going that that project's Shazam EM configuration page",
+            "required": false,
+            "type": "checkbox"
+        }
+    ],
+    "project-settings": [
+        {
+            "key": "project-category-list",
+            "name": "List of Ontologies for the project",
+            "required": false,
+            "type": "sub_settings",
+            "repeatable":true,
+            "sub_settings":[
+                {
+                    "key": "project-category",
+                    "name": "Ontology Category",
+                    "required": true,
+                    "type": "dropdown",
+                    "choices": [
+                        {
+                            "name": "Rooms",
+                            "value": "rooms"
+                        },
+                        {
+                            "name": "Buildings",
+                            "value": "buildings"
+                        }
+                    ]
+                }
+            ]
+        },
+        {
             "key": "server",
-            "name": "<b>Server</b>",
+            "name": "<b>Server</b><br>The API server to query room or building information from",
             "required": true,
             "type": "radio",
             "default": "development",
