@@ -45,4 +45,4 @@ In this example, `rooms_field` will only return results within `buildings_field`
 
 Upon record entry, all results will be shown without filter if `buildings_field` is empty.
 
-####Because of this, it is necessary to save the record with a selected building before this filter will function.
+Because of this, it is necessary to save the record with a selected building before this filter will function.
