@@ -50,9 +50,11 @@ class Client extends \GuzzleHttp\Client
             }
 
         } catch (\Exception $e) {
+            \REDCap::logEvent("Error: $e");
             $this->getEm()->emError($e->getMessage());
             $this->getEm()->exitAfterHook();
         } catch (GuzzleException $e) {
+            \REDCap::logEvent("Error: $e");
             $this->getEm()->emError($e->getMessage());
             $this->getEm()->exitAfterHook();
         }

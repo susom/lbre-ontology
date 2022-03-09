@@ -68,6 +68,7 @@ class LBRE extends AbstractExternalModule implements \OntologyProvider
             $this->setSystemSetting('bearer-expiration', strval(time() + $tokenJson['expires_in']));
 
         } catch (\Exception $e) {
+            \REDCap::logEvent("Error: $e");
             $this->emError("Error: $e");
         }
     }
@@ -80,7 +81,7 @@ class LBRE extends AbstractExternalModule implements \OntologyProvider
     public function sendQuery($category, $search_term = "")
     {
         try {
-            if (!isset($search_term))
+            if (empty($search_term))
                 throw new \Exception('No search term passed');
 
             $settings = $this->getSystemSettings();
@@ -91,8 +92,10 @@ class LBRE extends AbstractExternalModule implements \OntologyProvider
                 time() > $settings['bearer-expiration']['value']
             ];
 
-            if (array_search(true, $conditions)) //Reset bearer token if past expiration
+            if (array_search(true, $conditions) !== false) { //Reset bearer token if past expiration, reset
                 $this->initialize();
+                $settings = $this->getSystemSettings();
+            }
 
             $client = new Client($this);
 
@@ -108,6 +111,7 @@ class LBRE extends AbstractExternalModule implements \OntologyProvider
             return $client->createRequest("get", $url, $options);
 
         } catch (\Exception $e) {
+            \REDCap::logEvent("Error: $e");
             $this->emError("Error: $e");
             $this->exitAfterHook();
         }
@@ -154,7 +158,10 @@ class LBRE extends AbstractExternalModule implements \OntologyProvider
         } elseif (strtolower($category) === 'rooms') {
             $filterBy = $this->parseSmartVariable();
             if (isset($filterBy)) { // User wants to filter room by building ID
-                $record_data = json_decode(\REDCap::getData('json', null, $filterBy));
+                $ref_url = parse_url($_SERVER['HTTP_REFERER']);
+                parse_str($ref_url['query'], $params); //Get specific record_id
+                $record_data = json_decode(\REDCap::getData('json', $params['id'], $filterBy));
+
                 if (!empty($record_data)) { //Specific search by building
                     $buildingId = $record_data[0]->$filterBy;
                     $url .= "rooms/v1?srch1=$term&building=$buildingId";
@@ -225,7 +232,8 @@ class LBRE extends AbstractExternalModule implements \OntologyProvider
                 $values[] = $temp;
             }
         } else {
-            $this->emError('Category');
+            \REDCap::logEvent("Error: Category specified by search was not set correctly");
+            $this->emError('Category specified by search was not set correctly');
             $this->exitAfterHook();
         }
 

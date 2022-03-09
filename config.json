@@ -18,16 +18,6 @@
     ],
     "enable-every-page-hooks-on-system-pages": false,
     "links": {
-        "project": [
-            {
-                "name": "TestLBRE",
-                "icon": "fas fa-cube",
-                "url": "pages/test.php",
-                "show-header-and-footer": true
-            }
-        ],
-        "control-center": [
-        ]
     },
     "system-settings": [
         {
@@ -40,18 +30,6 @@
             "key": "auth-password",
             "name": "<b>Password credential for the authorization server</b>",
             "required": true,
-            "type": "text"
-        },
-        {
-            "key": "prod-login",
-            "name": "<b>Login credential for the authorization server if production is selected</b>",
-            "required": false,
-            "type": "text"
-        },
-        {
-            "key": "prod-password",
-            "name": "<b>Password credential for the authorization server if production is selected</b>",
-            "required": false,
             "type": "text"
         },
         {
