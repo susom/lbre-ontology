@@ -48,12 +48,27 @@ class LBRE extends AbstractExternalModule implements \OntologyProvider
     {
     }
 
+    public function redcap_survey_page_top(){
+        $table = $this->createActionTable();
+        if (empty($table))
+            $this->emError('Error in create Table, empty return value');
+
+        $this->injectJavascript($table);
+    }
+
+    public function redcap_data_entry_form_top(){
+        $table = $this->createActionTable();
+        if (empty($table))
+            $this->emError('Error in create Table, empty return value');
+
+        $this->injectJavascript($table);
+    }
+
     public function initialize()
     {
 
         try {
             $settings = $this->getSystemSettings();
-            $projectSettings = $this->getProjectSettings();
 
             if (!isset($settings['auth-login']) || !isset($settings['auth-password']))
                 throw new \Exception('Required authorization credentials not passed in EM settings');
@@ -74,11 +89,53 @@ class LBRE extends AbstractExternalModule implements \OntologyProvider
     }
 
     /**
+     * Creates a Key, Value array of action tags and their reference fields to inject upon page load
+     * @return array [filteredField => filterByField, ... ]
+     */
+    public function createActionTable(){
+        global $Proj;
+        $table = [];
+        foreach ($Proj->metadata as $field) {
+            if (str_contains($field['misc'], "filterby=")) {
+                $output = preg_split('/[\s,\n\r]+/', $field['misc']);
+                $filterField = null;
+                foreach ($output as $action)
+                    if (str_contains($action, "filterby="))
+                        $filterField = explode("=", $action)[1];
+                $table[$field['field_name']] = $filterField;
+            }
+        }
+        return $table;
+    }
+
+    /**
+     * Injects javascript files and any necessary data necessary before page load
+     * @param $bulk Data to be encoded
+     * @return void
+     */
+    public function injectJavascript($bulk = []){
+        try {
+
+            if(!empty($bulk)) { //If data, encode and inject
+                $encoded = json_encode($bulk);
+                print "<script type='text/javascript'>var actionTagTable = $encoded; </script>";;
+            }
+
+            $jsFilePath = $this->getUrl('scripts/override.js');
+            print "<script type='module' src=$jsFilePath></script>";
+
+        } catch(\Exception $e) {
+            \REDCap::logEvent("Error: $e");
+            $this->emError($e);
+        }
+    }
+
+    /**
      * @param $category | Category of ontology to search
      * @param $search_term
      * @return mixed|string|void
      */
-    public function sendQuery($category, $search_term = "")
+    public function sendQuery($category, $search_term = "", $filter=null)
     {
         try {
             if (empty($search_term))
@@ -106,7 +163,7 @@ class LBRE extends AbstractExternalModule implements \OntologyProvider
                 ]
             ];
 
-            $url = $this->getQueryUrl($category, $search_term);
+            $url = $this->getQueryUrl($category, $search_term, $filter);
 
             return $client->createRequest("get", $url, $options);
 
@@ -121,10 +178,11 @@ class LBRE extends AbstractExternalModule implements \OntologyProvider
      * Generates API url based on system and project setting
      * @param $category
      * @param $search_term
+     * @param $filter - building ID if request is client based
      * @return string
      * @throws \Exception
      */
-    public function getQueryUrl($category, $search_term)
+    public function getQueryUrl($category, $search_term, $filter)
     {
         $pSettings = $this->getProjectSettings();
         $sSettings = $this->getSystemSettings();
@@ -144,39 +202,52 @@ class LBRE extends AbstractExternalModule implements \OntologyProvider
                 break;
         }
 
-        if (!isset($url))
-            throw new \Exception('Empty url in system settings');
 //        $url = match ($pSettings['server']) {
 //            'production' => $pSettings['prod-url']['value'],
 //            'uat' => $pSettings['uat-url']['value'],
 //            default => $pSettings['dev-url']['value'],
 //        };
+
+        if (!isset($url))
+            throw new \Exception('Empty url in system settings');
+
         $term = urlencode(filter_var($search_term, FILTER_SANITIZE_STRING));
 
         if (strtolower($category) === 'buildings') {
             $url .= "locations/v1?srch1=$term";
         } elseif (strtolower($category) === 'rooms') {
-            $filterBy = $this->parseSmartVariable();
-            if (isset($filterBy)) { // User wants to filter room by building ID
-                $ref_url = parse_url($_SERVER['HTTP_REFERER']);
-                parse_str($ref_url['query'], $params); //Get specific record_id
-                $record_data = json_decode(\REDCap::getData('json', $params['id'], $filterBy));
+            if(isset($filter)){ //Request is initiated via autocomplete param on frontend, no save hook
+                $filter = urlencode(filter_var($filter, FILTER_SANITIZE_STRING));
+                $url .= "rooms/v1?srch1=$term&building=$filter";
+            } else {
+                $filterBy = $this->parseSmartVariable();
+                if (isset($filterBy)) { // User wants to filter room by building ID
+                    $ref_url = parse_url($_SERVER['HTTP_REFERER']);
+                    parse_str($ref_url['query'], $params); //Get specific record_id
+                    $record_data = json_decode(\REDCap::getData('json', $params['id'], $filterBy));
 
-                if (!empty($record_data)) { //Specific search by building
-                    $buildingId = $record_data[0]->$filterBy;
-                    $url .= "rooms/v1?srch1=$term&building=$buildingId";
-                } else { //Else regular search
+                    if (!empty($record_data)) { //Specific search by building
+                        $buildingId = $record_data[0]->$filterBy;
+                        $url .= "rooms/v1?srch1=$term&building=$buildingId";
+                    } else { //Else regular search
+                        $url .= "rooms/v1?srch1=$term";
+                    }
+                } else {
                     $url .= "rooms/v1?srch1=$term";
                 }
-            } else {
-                $url .= "rooms/v1?srch1=$term";
             }
 
         } else {
             throw new \Exception("EM must be configured using either location or room ontology, it is currently : $category");
         }
 
-        return $url;
+        if(isset($pSettings['result-count'])){
+            $count = $pSettings['result-count'];
+            return $url .= "&perPage=$count";
+        } else {
+            return $url;
+        }
+
     }
 
     /**
@@ -205,7 +276,7 @@ class LBRE extends AbstractExternalModule implements \OntologyProvider
      */
     public function searchOntology($category, $search_term, $result_limit)
     {
-        $res = $this->sendQuery($category, $search_term);
+        $res = $this->sendQuery($category, $search_term, $_GET['clientFilter']);
         $values = array();
 
         if (strtolower($category) === 'buildings') {
@@ -220,12 +291,11 @@ class LBRE extends AbstractExternalModule implements \OntologyProvider
         } elseif (strtolower($category) === 'rooms') {
             foreach ($res['buildings'] as $k) {
 //                if ($k['roomStatus'] === 'INACTIVE' || $k['roomCategoryDesc'] === 'UNASSIGNABLE AREAS')
-//                    continue;
-                $partitions = explode("-", $k['roomID']);
-                $roomID = $partitions[count($partitions) - 1];
+                if ($k['roomCategoryDesc'] === 'UNASSIGNABLE AREAS')
+                    continue;
 
                 $temp = [
-                    'code' => $roomID,
+                    'code' => $k['roomID'],
                     'display' => $k['roomName'] ?? $k['roomTypeDesc'] . " - " . $k['roomCategoryDesc'],
                     'active' => 'true'
                 ];
@@ -245,7 +315,7 @@ class LBRE extends AbstractExternalModule implements \OntologyProvider
             $desc = \REDCap::escapeHtml($val['display']);
             $results[$code] = $desc;
         }
-        $result_limit = (is_numeric($result_limit) ? $result_limit : 20);
+        $result_limit = (is_numeric($result_limit) ? $result_limit : 30);
 
         if (count($results) === 0)
             $results['__NR__'] = 'No Results';
