@@ -216,10 +216,10 @@ class LBRE extends AbstractExternalModule implements \OntologyProvider
         if (strtolower($category) === 'buildings') {
             $url .= "locations/v1?srch1=$term";
         } elseif (strtolower($category) === 'rooms') {
-            if(isset($filter)){ //Request is initiated via autocomplete param on frontend, no save hook
+            if(isset($filter) && !empty($filter)){ //Request is initiated via autocomplete param on frontend, no save hook
                 $filter = urlencode(filter_var($filter, FILTER_SANITIZE_STRING));
                 $url .= "rooms/v1?srch1=$term&building=$filter";
-            } else {
+            } else { //Backend filtering
                 $filterBy = $this->parseSmartVariable();
                 if (isset($filterBy)) { // User wants to filter room by building ID
                     $ref_url = parse_url($_SERVER['HTTP_REFERER']);
