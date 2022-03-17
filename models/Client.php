@@ -23,6 +23,7 @@ class Client extends \GuzzleHttp\Client
             'headers' => ['Authorization' => 'Basic ' . $this->getEncCredentials()]
         ];
 
+        $this->getEm()->emDebug($options);
         return $this->createRequest('get','https://aswsdev.stanford.edu/api/oauth/jwttoken', $options);
 
     }
@@ -51,11 +52,11 @@ class Client extends \GuzzleHttp\Client
 
         } catch (\Exception $e) {
             \REDCap::logEvent("Error: $e");
-            $this->getEm()->emError($e->getMessage());
+            $this->getEm()->emError($e);
             $this->getEm()->exitAfterHook();
         } catch (GuzzleException $e) {
             \REDCap::logEvent("Error: $e");
-            $this->getEm()->emError($e->getMessage());
+            $this->getEm()->emError($e);
             $this->getEm()->exitAfterHook();
         }
     }
