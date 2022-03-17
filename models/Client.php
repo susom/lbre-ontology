@@ -24,7 +24,7 @@ class Client extends \GuzzleHttp\Client
         ];
 
         $this->getEm()->emDebug($options);
-        return $this->createRequest('get','https://aswsdev.stanford.edu/api/oauth/jwttoken', $options);
+        return $this->createRequest('get','https://aswsuat.stanford.edu/api/oauth/jwttoken', $options);
 
     }
 
