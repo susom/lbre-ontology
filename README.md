@@ -33,7 +33,10 @@ Server designation will allow you to cycle between API endpoints at will.
 
 After enabling these settings in External Modules, buildings and rooms can then be selected from instrument configuration.
 
+
 ![action](./assets/instrument.png)
+
+Result count may also be specified in the external module settings.
 
 ### Additional functionality
 
@@ -41,8 +44,12 @@ Room fields can be filtered by building ID by specifying the corresponding build
 
 ![action](./assets/action.png)
 
-In this example, `rooms_field` will only return results within `buildings_field` specified by the action tag.
+In this example, `rooms_field` will only return results in the dropdown list if it is within the value specified in `buildings_field`.
 
-Upon record entry, all results will be shown without filter if `buildings_field` is empty.
+Filtering by building ID will work in the following circumstances:
+1. `buildings_field` and `rooms_field` are on the same form or survey page
+2. `buildings_field` has a value saved on a different form, and is still specified in an action tag on a room field
 
-Because of this, it is necessary to save the record with a selected building before this filter will function.
+The current implementation only allows for filtering room results by a single building ID.
+
+Upon user search, all results will be shown without filter if `buildings_field` is empty but still specified by an action tag.

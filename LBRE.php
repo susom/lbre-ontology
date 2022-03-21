@@ -79,8 +79,8 @@ class LBRE extends AbstractExternalModule implements \OntologyProvider
 
             // Generate
             $tokenJson = $client->generateBearerToken();
-            $this->setSystemSetting('bearer-token', $tokenJson['access_token']);
-            $this->setSystemSetting('bearer-expiration', strval(time() + $tokenJson['expires_in']));
+            $this->setProjectSetting('bearer-token', $tokenJson['access_token']);
+            $this->setProjectSetting('bearer-expiration', strval(time() + $tokenJson['expires_in']));
 
         } catch (\Exception $e) {
             \REDCap::logEvent("Error: $e");
@@ -141,24 +141,24 @@ class LBRE extends AbstractExternalModule implements \OntologyProvider
             if (empty($search_term))
                 throw new \Exception('No search term passed');
 
-            $settings = $this->getSystemSettings();
+            $settings = $this->getProjectSettings();
 
             $conditions = [
-                !isset($settings['bearer-token']['value']),
-                !isset($settings['bearer-expiration']['value']),
-                time() > $settings['bearer-expiration']['value']
+                !isset($settings['bearer-token']),
+                !isset($settings['bearer-expiration']),
+                time() > $settings['bearer-expiration']
             ];
 
             if (array_search(true, $conditions) !== false) { //Reset bearer token if past expiration, reset
                 $this->initialize();
-                $settings = $this->getSystemSettings();
+                $settings = $this->getProjectSettings();
             }
 
             $client = new Client($this);
 
             $options = [
                 'headers' => [
-                    'Authorization' => $settings['bearer-token']['value'],
+                    'Authorization' => $settings['bearer-token'],
                     'Accept' => 'application/json'
                 ]
             ];

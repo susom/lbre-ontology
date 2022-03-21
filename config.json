@@ -36,18 +36,6 @@
             "type": "text"
         },
         {
-            "key": "bearer-token",
-            "name": "<b>Token generated from the authorization server</b>",
-            "required": false,
-            "type": "text"
-        },
-        {
-            "key": "bearer-expiration",
-            "name": "<b>Expiration time of bearer token</b>",
-            "required": false,
-            "type": "text"
-        },
-        {
             "key": "prod-url",
             "name": "<b>Production url for Stanford Location API</b><br><i>The URL to call when production mode is checked</i>",
             "required": false,
@@ -139,6 +127,18 @@
                     "name": "20"
                 }
             ]
+        },
+        {
+            "key": "bearer-token",
+            "name": "<b>Token generated from the authorization server</b><br><i>This value is automatically generated upon request</i>",
+            "required": false,
+            "type": "text"
+        },
+        {
+            "key": "bearer-expiration",
+            "name": "<b>Expiration time of bearer token</b><br><i>This value is automatically generated upon request</i>",
+            "required": false,
+            "type": "text"
         },
         {
             "key": "enable-project-debug-logging",
