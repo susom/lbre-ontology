@@ -26,6 +26,7 @@ namespace Stanford\LBRE;
 include "emLoggerTrait.php";
 
 use ExternalModules\AbstractExternalModule;
+use ExternalModules\ExternalModules;
 
 require_once "models/Client.php";
 
@@ -69,23 +70,42 @@ class LBRE extends AbstractExternalModule implements \OntologyProvider
 
         try {
             $settings = $this->getSystemSettings();
+            global $Proj;
 
             if (!isset($settings['auth-login']) || !isset($settings['auth-password']))
                 throw new \Exception('Required authorization credentials not passed in EM settings');
 
             $client = new Client($this);
-            $client->setEncCredentials($settings['auth-login']['value'], $settings['auth-password']['value']);
+            $client->setEncCredentials($settings['auth-login']['system_value'], $settings['auth-password']['system_value']);
             $this->setClient($client);
 
-            // Generate
             $tokenJson = $client->generateBearerToken();
-            $this->setProjectSetting('bearer-token', $tokenJson['access_token']);
-            $this->setProjectSetting('bearer-expiration', strval(time() + $tokenJson['expires_in']));
+
+            $this->updateSystemSetting('bearer-token', $tokenJson['access_token']);
+            $this->updateSystemSetting('bearer-expiration', strval(time() + $tokenJson['expires_in']));
 
         } catch (\Exception $e) {
             \REDCap::logEvent("Error: $e");
             $this->emError("Error: $e");
         }
+    }
+
+    public function updateSystemSetting($setting, $val){
+        $q = $this->query("SELECT external_module_id FROM redcap_external_modules WHERE directory_prefix = ?", [$this->PREFIX]);
+        $row = db_fetch_array($q);
+        $external_module_id = $row[0];
+
+        //Check if system setting row exists, if not, create the row instead of update
+        $check_exists =  db_fetch_array($this->query("SELECT 1 FROM redcap_external_module_settings WHERE project_id is NULL AND `key` = ? AND external_module_id = ?", [$setting, $external_module_id]))[0];
+        if(!isset($check_exists)){ //Setting is not defined or empty, create
+            $res = $this->query("INSERT INTO redcap_external_module_settings (external_module_id, project_id, `key`, type, value) VALUES ($external_module_id, NULL, '$setting', 'string', '$val')", []);
+        } else {
+            $res = $this->query("UPDATE redcap_external_module_settings SET `value` = ? WHERE project_id is NULL AND `key` = ? AND external_module_id = ? ", [$val, $setting, $external_module_id]);
+        }
+
+        if(!$res)
+            throw new \Exception("Unable to update redcap_external_modules_settings table manually");
+
     }
 
     /**
@@ -141,24 +161,24 @@ class LBRE extends AbstractExternalModule implements \OntologyProvider
             if (empty($search_term))
                 throw new \Exception('No search term passed');
 
-            $settings = $this->getProjectSettings();
+            $settings = $this->getSystemSettings();
 
             $conditions = [
-                !isset($settings['bearer-token']),
-                !isset($settings['bearer-expiration']),
+                !isset($settings['bearer-token']['system_value']),
+                !isset($settings['bearer-expiration']['system_value']),
                 time() > $settings['bearer-expiration']
             ];
 
             if (array_search(true, $conditions) !== false) { //Reset bearer token if past expiration, reset
                 $this->initialize();
-                $settings = $this->getProjectSettings();
+                $settings = $this->getSystemSettings();
             }
 
             $client = new Client($this);
 
             $options = [
                 'headers' => [
-                    'Authorization' => $settings['bearer-token'],
+                    'Authorization' => $settings['bearer-token']['system_value'],
                     'Accept' => 'application/json'
                 ]
             ];
