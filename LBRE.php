@@ -51,17 +51,11 @@ class LBRE extends AbstractExternalModule implements \OntologyProvider
 
     public function redcap_survey_page_top(){
         $table = $this->createActionTable();
-        if (empty($table))
-            $this->emError('Error in create Table, empty return value');
-
         $this->injectJavascript($table);
     }
 
     public function redcap_data_entry_form_top(){
         $table = $this->createActionTable();
-        if (empty($table))
-            $this->emError('Error in create Table, empty return value');
-
         $this->injectJavascript($table);
     }
 

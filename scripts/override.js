@@ -1,6 +1,5 @@
 
 $(document).ready(() => {
-    console.log("hi")
     OverrideHelper.truncateRoomID();
     OverrideHelper.verifyActionTags();
 })
