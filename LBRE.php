@@ -69,6 +69,7 @@ class LBRE extends AbstractExternalModule implements \OntologyProvider
     {
 
         try {
+            $this->disableUserBasedSettingPermissions();
             $settings = $this->getSystemSettings();
             global $Proj;
 
@@ -79,10 +80,10 @@ class LBRE extends AbstractExternalModule implements \OntologyProvider
             $client->setEncCredentials($settings['auth-login']['system_value'], $settings['auth-password']['system_value']);
             $this->setClient($client);
 
-            $tokenJson = $client->generateBearerToken();
+            $tokenJson = $client->generateBearerToken($settings['auth-url']['system_value']);
 
-            $this->updateSystemSetting('bearer-token', $tokenJson['access_token']);
-            $this->updateSystemSetting('bearer-expiration', strval(time() + $tokenJson['expires_in']));
+            $this->setSystemSetting('bearer-token', $tokenJson['access_token']);
+            $this->setSystemSetting('bearer-expiration', strval(time() + $tokenJson['expires_in']));
 
         } catch (\Exception $e) {
             \REDCap::logEvent("Error: $e");
@@ -90,23 +91,24 @@ class LBRE extends AbstractExternalModule implements \OntologyProvider
         }
     }
 
-    public function updateSystemSetting($setting, $val){
-        $q = $this->query("SELECT external_module_id FROM redcap_external_modules WHERE directory_prefix = ?", [$this->PREFIX]);
-        $row = db_fetch_array($q);
-        $external_module_id = $row[0];
 
-        //Check if system setting row exists, if not, create the row instead of update
-        $check_exists =  db_fetch_array($this->query("SELECT 1 FROM redcap_external_module_settings WHERE project_id is NULL AND `key` = ? AND external_module_id = ?", [$setting, $external_module_id]))[0];
-        if(!isset($check_exists)){ //Setting is not defined or empty, create
-            $res = $this->query("INSERT INTO redcap_external_module_settings (external_module_id, project_id, `key`, type, value) VALUES ($external_module_id, NULL, '$setting', 'string', '$val')", []);
-        } else {
-            $res = $this->query("UPDATE redcap_external_module_settings SET `value` = ? WHERE project_id is NULL AND `key` = ? AND external_module_id = ? ", [$val, $setting, $external_module_id]);
-        }
 
-        if(!$res)
-            throw new \Exception("Unable to update redcap_external_modules_settings table manually");
-
-    }
+//    public function updateSystemSetting($setting, $val){
+//        $q = $this->query("SELECT external_module_id FROM redcap_external_modules WHERE directory_prefix = ?", [$this->PREFIX]);
+//        $row = db_fetch_array($q);
+//        $external_module_id = $row[0];
+//
+//        //Check if system setting row exists, if not, create the row instead of update
+//        $check_exists =  db_fetch_array($this->query("SELECT 1 FROM redcap_external_module_settings WHERE project_id is NULL AND `key` = ? AND external_module_id = ?", [$setting, $external_module_id]))[0];
+//        if(!isset($check_exists)){ //Setting is not defined or empty, create
+//            $res = $this->query("INSERT INTO redcap_external_module_settings (external_module_id, project_id, `key`, type, value) VALUES ($external_module_id, NULL, '$setting', 'string', '$val')", []);
+//        } else {
+//            $res = $this->query("UPDATE redcap_external_module_settings SET `value` = ? WHERE project_id is NULL AND `key` = ? AND external_module_id = ? ", [$val, $setting, $external_module_id]);
+//        }
+//
+//        if(!$res)
+//            throw new \Exception("Unable to update redcap_external_modules_settings table manually");
+//    }
 
     /**
      * Creates a Key, Value array of action tags and their reference fields to inject upon page load
@@ -136,12 +138,9 @@ class LBRE extends AbstractExternalModule implements \OntologyProvider
     public function injectJavascript($bulk = []){
         try {
 
-            if(!empty($bulk)) { //If data, encode and inject
-                $encoded = json_encode($bulk);
-                print "<script type='text/javascript'>var actionTagTable = $encoded; </script>";;
-            }
-
+            $encoded = json_encode($bulk);
             $jsFilePath = $this->getUrl('scripts/override.js');
+            print "<script type='text/javascript'>var actionTagTable = $encoded; </script>";;
             print "<script type='module' src=$jsFilePath></script>";
 
         } catch(\Exception $e) {
@@ -190,7 +189,6 @@ class LBRE extends AbstractExternalModule implements \OntologyProvider
         } catch (\Exception $e) {
             \REDCap::logEvent("Error: $e");
             $this->emError("Error: $e");
-            $this->exitAfterHook();
         }
     }
 
@@ -207,21 +205,21 @@ class LBRE extends AbstractExternalModule implements \OntologyProvider
         $pSettings = $this->getProjectSettings();
         $sSettings = $this->getSystemSettings();
 
-        switch ($pSettings['server']) {
-            case 'development':
-                $url = $sSettings['dev-url']['value'];
-                break;
-            case 'production':
-                $url = $sSettings['prod-url']['value'];
-                break;
-            case 'uat':
-                $url = $sSettings['uat-url']['value'];
-                break;
-            default:
-                $url = $sSettings['dev-url']['value'];
-                break;
-        }
-
+//        switch ($pSettings['server']) {
+//            case 'development':
+//                $url = $sSettings['dev-url']['value'];
+//                break;
+//            case 'production':
+//                $url = $sSettings['prod-url']['value'];
+//                break;
+//            case 'uat':
+//                $url = $sSettings['uat-url']['value'];
+//                break;
+//            default:
+//                $url = $sSettings['dev-url']['value'];
+//                break;
+//        }
+        $url = $sSettings['query-url']['system_value'];
 //        $url = match ($pSettings['server']) {
 //            'production' => $pSettings['prod-url']['value'],
 //            'uat' => $pSettings['uat-url']['value'],
@@ -324,7 +322,7 @@ class LBRE extends AbstractExternalModule implements \OntologyProvider
         } else {
             \REDCap::logEvent("Error: Category specified by search was not set correctly");
             $this->emError('Category specified by search was not set correctly');
-            $this->exitAfterHook();
+//            $this->exitAfterHook();
         }
 
         $results = array();

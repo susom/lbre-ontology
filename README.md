@@ -16,10 +16,10 @@ Here is a list of required system settings (also seen in config.json):
 
 ```
 {
-    "server": "development" || "uat" || "production",
     "auth-login": <Username>
     "auth-password": <Password>
-    "dev-url": <DEV API URL>
+    "auth-url": <JWT authentication url>
+    "query-url: <API query url>
 }
 ```
 
@@ -28,8 +28,6 @@ Here is a list of required system settings (also seen in config.json):
 ![project_setup](./assets/project_setup.png)
 
 Both Rooms and Buildings must be selected as ontology categories from the repeatable dropdown list.
-
-Server designation will allow you to cycle between API endpoints at will.
 
 After enabling these settings in External Modules, buildings and rooms can then be selected from instrument configuration.
 

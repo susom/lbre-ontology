@@ -1,5 +1,6 @@
 
 $(document).ready(() => {
+    console.log("hi")
     OverrideHelper.truncateRoomID();
     OverrideHelper.verifyActionTags();
 })
@@ -44,6 +45,7 @@ const OverrideHelper = {
 
     verifyActionTags: () => {
         //Injected via php before page load
+
         if(actionTagTable){
             for(const key of Object.keys(actionTagTable)){
                 let roomPageElement = $(`#${key}-autosuggest`);

@@ -18,13 +18,13 @@ class Client extends \GuzzleHttp\Client
 
     }
 
-    public function generateBearerToken(){
+    public function generateBearerToken($url){
         $options = [
             'headers' => ['Authorization' => 'Basic ' . $this->getEncCredentials()]
         ];
 
         $this->getEm()->emDebug($options);
-        return $this->createRequest('get','https://aswsuat.stanford.edu/api/oauth/jwttoken', $options);
+        return $this->createRequest('get',$url, $options);
 
     }
 

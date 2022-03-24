@@ -36,21 +36,15 @@
             "type": "text"
         },
         {
-            "key": "prod-url",
-            "name": "<b>Production url for Stanford Location API</b><br><i>The URL to call when production mode is checked</i>",
+            "key": "auth-url",
+            "name": "<b>Url for the jwt authorization server</b><br><i>Should be in the form of https://host/api/oauth/jwttoken</i>",
             "required": false,
             "type": "text"
         },
         {
-            "key": "uat-url",
-            "name": "<b>UAT url for Stanford Location API</b><br><i>The URL to call when UAT mode is checked</i>",
+            "key": "query-url",
+            "name": "<b>Url for the Location API</b><br><i>Should be in the form of https://host/LBRE/</i>",
             "required": false,
-            "type": "text"
-        },
-        {
-            "key": "dev-url",
-            "name": "<b>DEV url for Stanford Location API</b><br><i>The URL to call when dev mode is checked</i>",
-            "required": true,
             "type": "text"
         },
         {
@@ -95,27 +89,6 @@
                             "value": "buildings"
                         }
                     ]
-                }
-            ]
-        },
-        {
-            "key": "server",
-            "name": "<b>Server</b><br>The API server to query room or building information from",
-            "required": true,
-            "type": "radio",
-            "default": "development",
-            "choices": [
-                {
-                    "value": "development",
-                    "name": "Development"
-                },
-                {
-                    "value": "uat",
-                    "name": "UAT"
-                },
-                {
-                    "value": "production",
-                    "name": "Production"
                 }
             ]
         },
