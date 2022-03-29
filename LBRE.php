@@ -49,12 +49,14 @@ class LBRE extends AbstractExternalModule implements \OntologyProvider
     {
     }
 
-    public function redcap_survey_page_top(){
+    public function redcap_survey_page_top()
+    {
         $table = $this->createActionTable();
         $this->injectJavascript($table);
     }
 
-    public function redcap_data_entry_form_top(){
+    public function redcap_data_entry_form_top()
+    {
         $table = $this->createActionTable();
         $this->injectJavascript($table);
     }
@@ -108,7 +110,8 @@ class LBRE extends AbstractExternalModule implements \OntologyProvider
      * Creates a Key, Value array of action tags and their reference fields to inject upon page load
      * @return array [filteredField => filterByField, ... ]
      */
-    public function createActionTable(){
+    public function createActionTable()
+    {
         global $Proj;
         $table = [];
         foreach ($Proj->metadata as $field) {
@@ -129,7 +132,8 @@ class LBRE extends AbstractExternalModule implements \OntologyProvider
      * @param $bulk Data to be encoded
      * @return void
      */
-    public function injectJavascript($bulk = []){
+    public function injectJavascript($bulk = [])
+    {
         try {
 
             $encoded = json_encode($bulk);
@@ -137,7 +141,7 @@ class LBRE extends AbstractExternalModule implements \OntologyProvider
             print "<script type='text/javascript'>var actionTagTable = $encoded; </script>";;
             print "<script type='module' src=$jsFilePath></script>";
 
-        } catch(\Exception $e) {
+        } catch (\Exception $e) {
             \REDCap::logEvent("Error: $e");
             $this->emError($e);
         }
@@ -148,7 +152,7 @@ class LBRE extends AbstractExternalModule implements \OntologyProvider
      * @param $search_term
      * @return mixed|string|void
      */
-    public function sendQuery($category, $search_term = "", $filter=null)
+    public function sendQuery($category, $search_term = "", $filter = null)
     {
         try {
             if (empty($search_term))
@@ -159,7 +163,7 @@ class LBRE extends AbstractExternalModule implements \OntologyProvider
             $conditions = [
                 !isset($settings['bearer-token']['system_value']),
                 !isset($settings['bearer-expiration']['system_value']),
-                time() > $settings['bearer-expiration']
+                time() > $settings['bearer-expiration']['system_value']
             ];
 
             if (array_search(true, $conditions) !== false) { //Reset bearer token if past expiration, reset
@@ -199,26 +203,7 @@ class LBRE extends AbstractExternalModule implements \OntologyProvider
         $pSettings = $this->getProjectSettings();
         $sSettings = $this->getSystemSettings();
 
-//        switch ($pSettings['server']) {
-//            case 'development':
-//                $url = $sSettings['dev-url']['value'];
-//                break;
-//            case 'production':
-//                $url = $sSettings['prod-url']['value'];
-//                break;
-//            case 'uat':
-//                $url = $sSettings['uat-url']['value'];
-//                break;
-//            default:
-//                $url = $sSettings['dev-url']['value'];
-//                break;
-//        }
         $url = $sSettings['query-url']['system_value'];
-//        $url = match ($pSettings['server']) {
-//            'production' => $pSettings['prod-url']['value'],
-//            'uat' => $pSettings['uat-url']['value'],
-//            default => $pSettings['dev-url']['value'],
-//        };
 
         if (!isset($url))
             throw new \Exception('Empty url in system settings');
@@ -228,7 +213,7 @@ class LBRE extends AbstractExternalModule implements \OntologyProvider
         if (strtolower($category) === 'buildings') {
             $url .= "locations/v1?srch1=$term";
         } elseif (strtolower($category) === 'rooms') {
-            if(isset($filter) && !empty($filter)){ //Request is initiated via autocomplete param on frontend, no save hook
+            if (isset($filter) && !empty($filter)) { //Request is initiated via autocomplete param on frontend, no save hook
                 $filter = urlencode(filter_var($filter, FILTER_SANITIZE_STRING));
                 $url .= "rooms/v1?srch1=$term&building=$filter";
             } else { //Backend filtering
@@ -253,7 +238,7 @@ class LBRE extends AbstractExternalModule implements \OntologyProvider
             throw new \Exception("EM must be configured using either location or room ontology, it is currently : $category");
         }
 
-        if(isset($pSettings['result-count'])){
+        if (isset($pSettings['result-count'])) {
             $count = $pSettings['result-count'];
             return $url .= "&perPage=$count";
         } else {

@@ -23,7 +23,6 @@ class Client extends \GuzzleHttp\Client
             'headers' => ['Authorization' => 'Basic ' . $this->getEncCredentials()]
         ];
 
-        $this->getEm()->emDebug($options);
         return $this->createRequest('get',$url, $options);
 
     }
@@ -53,11 +52,9 @@ class Client extends \GuzzleHttp\Client
         } catch (\Exception $e) {
             \REDCap::logEvent("Error: $e");
             $this->getEm()->emError($e);
-            $this->getEm()->exitAfterHook();
         } catch (GuzzleException $e) {
             \REDCap::logEvent("Error: $e");
             $this->getEm()->emError($e);
-            $this->getEm()->exitAfterHook();
         }
     }
 
