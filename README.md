@@ -1,7 +1,7 @@
 # LBRE Ontology External Module
 
-This redcap module extends the functionality of the Simple Ontology External Module and adds the ability to query
-Stanford room and building Data through the location API.
+This redcap module extends the functionality of the [Simple Ontology External Module](https://github.com/aehrc/redcap_simple_ontology_provider)
+and adds the ability to query Stanford room and building Data through the location API.
 
 
 ![example](./assets/example.png)
