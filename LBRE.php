@@ -288,8 +288,8 @@ class LBRE extends AbstractExternalModule implements \OntologyProvider
         } elseif (strtolower($category) === 'rooms') {
             foreach ($res['buildings'] as $k) {
 //                if ($k['roomStatus'] === 'INACTIVE' || $k['roomCategoryDesc'] === 'UNASSIGNABLE AREAS')
-                if ($k['roomCategoryDesc'] === 'UNASSIGNABLE AREAS')
-                    continue;
+//                if ($k['roomCategoryDesc'] === 'UNASSIGNABLE AREAS')
+//                    continue;
 
                 $temp = [
                     'code' => $k['roomID'],
