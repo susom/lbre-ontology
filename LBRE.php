@@ -78,6 +78,10 @@ class LBRE extends AbstractExternalModule implements \OntologyProvider
 
             $tokenJson = $client->generateBearerToken($settings['auth-url']['system_value']);
 
+            if(empty($tokenJson)){
+                throw new Exception('Error : bearer token not generated correctly');
+            }
+
             $this->setSystemSetting('bearer-token', $tokenJson['access_token']);
             $this->setSystemSetting('bearer-expiration', strval(time() + $tokenJson['expires_in']));
 
@@ -115,7 +119,7 @@ class LBRE extends AbstractExternalModule implements \OntologyProvider
         global $Proj;
         $table = [];
         foreach ($Proj->metadata as $field) {
-            if (str_contains($field['misc'], "filterby=")) {
+            if (!empty($field['misc']) && str_contains($field['misc'], "filterby=")) {
                 $output = preg_split('/[\s,\n\r]+/', $field['misc']);
                 $filterField = null;
                 foreach ($output as $action)
@@ -159,17 +163,24 @@ class LBRE extends AbstractExternalModule implements \OntologyProvider
                 throw new \Exception('No search term passed');
 
             $settings = $this->getSystemSettings();
-
-            $conditions = [
-                !isset($settings['bearer-token']['system_value']),
-                !isset($settings['bearer-expiration']['system_value']),
-                time() > $settings['bearer-expiration']['system_value']
-            ];
-
-            if (array_search(true, $conditions) !== false) { //Reset bearer token if past expiration, reset
+            if(!isset($settings['bearer-token'])
+                || !isset($settings['bearer-token']['system_value'])
+                || !isset($settings['bearer-expiration']['system_value'])
+                || time() > $settings['bearer-expiration']['system_value']
+            ){
                 $this->initialize();
                 $settings = $this->getSystemSettings();
             }
+//            $conditions = [
+//                !isset($settings['bearer-token']['system_value']),
+//                !isset($settings['bearer-expiration']['system_value']),
+//                time() > $settings['bearer-expiration']['system_value']
+//            ];
+
+//            if (in_array(true, $conditions)) { //Reset bearer token if past expiration, reset
+//                $this->initialize();
+//                $settings = $this->getSystemSettings();
+//            }
 
             $client = new Client($this);
 
@@ -208,7 +219,7 @@ class LBRE extends AbstractExternalModule implements \OntologyProvider
         if (!isset($url))
             throw new \Exception('Empty url in system settings');
 
-        $term = urlencode(filter_var($search_term, FILTER_SANITIZE_STRING));
+        $term = urlencode(htmlspecialchars($search_term, ENT_NOQUOTES));
 
         if (strtolower($category) === 'buildings') {
             $url .= "locations/v1?srch1=$term";
@@ -273,7 +284,7 @@ class LBRE extends AbstractExternalModule implements \OntologyProvider
      */
     public function searchOntology($category, $search_term, $result_limit)
     {
-        $res = $this->sendQuery($category, $search_term, $_GET['clientFilter']);
+        $res = $this->sendQuery($category, $search_term, $_GET['clientFilter'] ?? null);
         $values = array();
 
         if (strtolower($category) === 'buildings') {
