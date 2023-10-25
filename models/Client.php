@@ -3,6 +3,7 @@ namespace Stanford\LBRE;
 
 use GuzzleHttp\Exception\ClientException;
 use GuzzleHttp\Exception\GuzzleException;
+use Exception;
 
 class Client extends \GuzzleHttp\Client
 {
@@ -22,8 +23,12 @@ class Client extends \GuzzleHttp\Client
         $options = [
             'headers' => ['Authorization' => 'Basic ' . $this->getEncCredentials()]
         ];
+        $response = $this->createRequest('get',$url, $options);
 
-        return $this->createRequest('get',$url, $options);
+        $this->getEm()->emLog('Bearer response:');
+        $this->getEm()->emLog($response);
+
+        return $response;
 
     }
 
@@ -38,12 +43,13 @@ class Client extends \GuzzleHttp\Client
         try {
             $response = parent::request($method, $uri, $options);
             $code = $response->getStatusCode();
-
+            $this->getEm()->emLog($response);
             if ($code == 200 || $code == 201 || $code == 202) {
                 $content = $response->getBody()->getContents();
                 if (is_array(json_decode($content, true))) {
                     return json_decode($content, true);
                 }
+
                 return $content;
             } else {
                 throw new \Exception("Request has failed: $response");

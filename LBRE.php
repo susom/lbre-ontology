@@ -27,6 +27,7 @@ include "emLoggerTrait.php";
 
 use ExternalModules\AbstractExternalModule;
 use ExternalModules\ExternalModules;
+use Exception;
 
 require_once "models/Client.php";
 
@@ -79,7 +80,7 @@ class LBRE extends AbstractExternalModule implements \OntologyProvider
             $tokenJson = $client->generateBearerToken($settings['auth-url']['system_value']);
 
             if(empty($tokenJson)){
-                throw new Exception('Error : bearer token not generated correctly');
+                throw new \Exception('Error : bearer token not generated correctly');
             }
 
             $this->setSystemSetting('bearer-token', $tokenJson['access_token']);
