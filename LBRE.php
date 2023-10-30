@@ -182,19 +182,23 @@ class LBRE extends AbstractExternalModule implements \OntologyProvider
 //                $this->initialize();
 //                $settings = $this->getSystemSettings();
 //            }
+            if(isset($settings['bearer-token'])) {
+                $client = new Client($this);
 
-            $client = new Client($this);
+                $options = [
+                    'headers' => [
+                        'Authorization' => $settings['bearer-token']['system_value'],
+                        'Accept' => 'application/json'
+                    ]
+                ];
 
-            $options = [
-                'headers' => [
-                    'Authorization' => $settings['bearer-token']['system_value'],
-                    'Accept' => 'application/json'
-                ]
-            ];
+                $url = $this->getQueryUrl($category, $search_term, $filter);
 
-            $url = $this->getQueryUrl($category, $search_term, $filter);
+                return $client->createRequest("get", $url, $options);
+            } else {
+                throw new \Exception('Bearer token failed to be created on second attempt');
+            }
 
-            return $client->createRequest("get", $url, $options);
 
         } catch (\Exception $e) {
             \REDCap::logEvent("Error: $e");

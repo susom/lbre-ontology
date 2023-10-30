@@ -41,6 +41,7 @@ class Client extends \GuzzleHttp\Client
      */
     public function createRequest($method, $uri = '', array $options = []){
         try {
+            $this->getEm()->emLog($method, $uri, $options);
             $response = parent::request($method, $uri, $options);
             $code = $response->getStatusCode();
             $this->getEm()->emLog($response);
@@ -58,7 +59,7 @@ class Client extends \GuzzleHttp\Client
         } catch (\Exception $e) {
             \REDCap::logEvent("Error: $e");
             $this->getEm()->emError($e);
-        } catch (GuzzleException $e) {
+        } catch (\GuzzleException $e) {
             \REDCap::logEvent("Error: $e");
             $this->getEm()->emError($e);
         }
