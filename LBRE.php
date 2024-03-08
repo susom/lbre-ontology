@@ -93,24 +93,6 @@ class LBRE extends AbstractExternalModule implements \OntologyProvider
     }
 
 
-
-//    public function updateSystemSetting($setting, $val){
-//        $q = $this->query("SELECT external_module_id FROM redcap_external_modules WHERE directory_prefix = ?", [$this->PREFIX]);
-//        $row = db_fetch_array($q);
-//        $external_module_id = $row[0];
-//
-//        //Check if system setting row exists, if not, create the row instead of update
-//        $check_exists =  db_fetch_array($this->query("SELECT 1 FROM redcap_external_module_settings WHERE project_id is NULL AND `key` = ? AND external_module_id = ?", [$setting, $external_module_id]))[0];
-//        if(!isset($check_exists)){ //Setting is not defined or empty, create
-//            $res = $this->query("INSERT INTO redcap_external_module_settings (external_module_id, project_id, `key`, type, value) VALUES ($external_module_id, NULL, '$setting', 'string', '$val')", []);
-//        } else {
-//            $res = $this->query("UPDATE redcap_external_module_settings SET `value` = ? WHERE project_id is NULL AND `key` = ? AND external_module_id = ? ", [$val, $setting, $external_module_id]);
-//        }
-//
-//        if(!$res)
-//            throw new \Exception("Unable to update redcap_external_modules_settings table manually");
-//    }
-
     /**
      * Creates a Key, Value array of action tags and their reference fields to inject upon page load
      * @return array [filteredField => filterByField, ... ]
@@ -224,7 +206,7 @@ class LBRE extends AbstractExternalModule implements \OntologyProvider
         if (!isset($url))
             throw new \Exception('Empty url in system settings');
 
-        $term = urlencode(htmlspecialchars($search_term, ENT_NOQUOTES));
+        $term = strtolower(urlencode(htmlspecialchars($search_term, ENT_NOQUOTES)));
 
         if (strtolower($category) === 'buildings') {
             $url .= "locations/v1?srch1=$term";
