@@ -41,7 +41,6 @@ class Client extends \GuzzleHttp\Client
      */
     public function createRequest($method, $uri = '', array $options = []){
         try {
-            $this->getEm()->emLog($method, $uri, $options);
             $response = parent::request($method, $uri, $options);
             $code = $response->getStatusCode();
             $this->getEm()->emLog($response);
