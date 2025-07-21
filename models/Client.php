@@ -19,14 +19,22 @@ class Client extends \GuzzleHttp\Client
 
     }
 
-    public function generateBearerToken($url){
+    public function generateBearerToken($url, $user, $pass){
+//        $options = [
+//            'headers' => ['Authorization' => 'Basic ' . $this->getEncCredentials()]
+//        ];
         $options = [
-            'headers' => ['Authorization' => 'Basic ' . $this->getEncCredentials()]
+            'grant_type' => 'client_credentials',
+            'client_id' => $user,
+            'client_secret' => $pass,
         ];
-        $response = $this->createRequest('get',$url, $options);
+        $headers = [
+            'Content-Type' => 'application/x-www-form-urlencoded',
+            'Accept' => 'application/json',
+        ];
+        $response = $this->createRequest('post',$url, $headers, $options);
 
-        $this->getEm()->emLog('Bearer response:');
-        $this->getEm()->emLog($response);
+        $this->getEm()->emLog('Bearer generated');
 
         return $response;
 
@@ -39,11 +47,19 @@ class Client extends \GuzzleHttp\Client
      * @param array $options
      * @return mixed|string|void
      */
-    public function createRequest($method, $uri = '', array $options = []){
+    public function createRequest($method, $uri = '', array $headers, array $options = []){
         try {
-            $response = parent::request($method, $uri, $options);
+            $requestOptions = [
+                'headers' => $headers,
+            ];
+
+            if (!empty($options)) {
+                $requestOptions['form_params'] = $options;
+            }
+
+            $response = parent::request($method, $uri, $requestOptions);
             $code = $response->getStatusCode();
-            $this->getEm()->emLog($response);
+
             if ($code == 200 || $code == 201 || $code == 202) {
                 $content = $response->getBody()->getContents();
                 if (is_array(json_decode($content, true))) {

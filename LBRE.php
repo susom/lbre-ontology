@@ -69,15 +69,17 @@ class LBRE extends AbstractExternalModule implements \OntologyProvider
             $this->disableUserBasedSettingPermissions();
             $settings = $this->getSystemSettings();
             global $Proj;
+            $login = $settings['auth-login']['system_value'];
+            $pass = $settings['auth-password']['system_value'];
 
-            if (!isset($settings['auth-login']) || !isset($settings['auth-password']))
+            if (empty($login) || empty($pass))
                 throw new \Exception('Required authorization credentials not passed in EM settings');
 
             $client = new Client($this);
             $client->setEncCredentials($settings['auth-login']['system_value'], $settings['auth-password']['system_value']);
             $this->setClient($client);
 
-            $tokenJson = $client->generateBearerToken($settings['auth-url']['system_value']);
+            $tokenJson = $client->generateBearerToken($settings['auth-url']['system_value'], $login, $pass);
 
             if(empty($tokenJson)){
                 throw new \Exception('Error : bearer token not generated correctly');
@@ -169,14 +171,18 @@ class LBRE extends AbstractExternalModule implements \OntologyProvider
 
                 $options = [
                     'headers' => [
-                        'Authorization' => $settings['bearer-token']['system_value'],
+                        'Authorization' => 'Bearer ' . $settings['bearer-token']['system_value'],
                         'Accept' => 'application/json'
                     ]
+                ];
+                $headers = [
+                    'Authorization' => 'Bearer ' . $settings['bearer-token']['system_value'],
+                    'Accept' => 'text/json'
                 ];
 
                 $url = $this->getQueryUrl($category, $search_term, $filter);
 
-                return $client->createRequest("get", $url, $options);
+                return $client->createRequest("get", $url, $headers, []);
             } else {
                 throw new \Exception('Bearer token failed to be created on second attempt');
             }
@@ -206,14 +212,18 @@ class LBRE extends AbstractExternalModule implements \OntologyProvider
         if (!isset($url))
             throw new \Exception('Empty url in system settings');
 
-        $term = strtolower(urlencode(htmlspecialchars($search_term, ENT_NOQUOTES)));
+        // Locations API is case-sensitive
+        if($category === 'buildings')
+            $term = urlencode(htmlspecialchars($search_term, ENT_NOQUOTES));
+        else // Rooms API seems to have only upper case search terms
+            $term = strtoupper(urlencode(htmlspecialchars($search_term, ENT_NOQUOTES)));
 
         if (strtolower($category) === 'buildings') {
-            $url .= "locations/v1?srch1=$term";
+            $url .= "locations/all?srch1=$term";
         } elseif (strtolower($category) === 'rooms') {
             if (isset($filter) && !empty($filter)) { //Request is initiated via autocomplete param on frontend, no save hook
                 $filter = urlencode(filter_var($filter, FILTER_SANITIZE_STRING));
-                $url .= "rooms/v1?srch1=$term&building=$filter";
+                $url .= "rooms/all?srch1=$term&building=$filter";
             } else { //Backend filtering
                 $filterBy = $this->parseSmartVariable();
                 if (isset($filterBy)) { // User wants to filter room by building ID
@@ -223,12 +233,12 @@ class LBRE extends AbstractExternalModule implements \OntologyProvider
 
                     if (!empty($record_data)) { //Specific search by building
                         $buildingId = $record_data[0]->$filterBy;
-                        $url .= "rooms/v1?srch1=$term&building=$buildingId";
+                        $url .= "rooms/all?srch1=$term&building=$buildingId";
                     } else { //Else regular search
-                        $url .= "rooms/v1?srch1=$term";
+                        $url .= "rooms/all?srch1=$term";
                     }
                 } else {
-                    $url .= "rooms/v1?srch1=$term";
+                    $url .= "rooms/all?srch1=$term";
                 }
             }
 
@@ -238,7 +248,8 @@ class LBRE extends AbstractExternalModule implements \OntologyProvider
 
         if (isset($pSettings['result-count'])) {
             $count = $pSettings['result-count'];
-            return $url .= "&perPage=$count";
+            $url .= "&perPage=$count";
+            return $url;
         } else {
             return $url;
         }
@@ -285,13 +296,16 @@ class LBRE extends AbstractExternalModule implements \OntologyProvider
             }
         } elseif (strtolower($category) === 'rooms') {
             foreach ($res['buildings'] as $k) {
-//                if ($k['roomStatus'] === 'INACTIVE' || $k['roomCategoryDesc'] === 'UNASSIGNABLE AREAS')
-//                if ($k['roomCategoryDesc'] === 'UNASSIGNABLE AREAS')
+//                if ($k['roomStatus'] === 'INACTIVE' || $k['roomCategoryDescription'] === 'UNASSIGNABLE AREAS')
 //                    continue;
+
+                $desc = !empty($k['roomName']) ? $k['roomName'] : $k['roomTypeDescription'] . " - " . $k['roomCategoryDescription'];
+                $parts = explode('-', $k['roomID']);
+                $roomID = end($parts);
 
                 $temp = [
                     'code' => $k['roomID'],
-                    'display' => $k['roomName'] ?? $k['roomTypeDesc'] . " - " . $k['roomCategoryDesc'],
+                    'display' => '(' . $roomID . ') ' . $desc ,
                     'active' => 'true'
                 ];
                 $values[] = $temp;
@@ -303,13 +317,39 @@ class LBRE extends AbstractExternalModule implements \OntologyProvider
         }
 
         $results = array();
+        $additional_buildings = require 'manual/buildings.php';
+        $additional_rooms = require 'manual/rooms.php';
 
+
+        if ($category === 'buildings') {
+            $filtered_additional = array_filter($additional_buildings, function($item) use ($search_term) {
+                return stripos($item['code'], $search_term) !== false ||
+                    stripos($item['display'], $search_term) !== false;
+            });
+        } else {
+            $filtered_additional = array_filter($additional_rooms, function($item) use ($search_term) {
+                $matches_search = stripos($item['code'], $search_term) !== false ||
+                    stripos($item['display'], $search_term) !== false;
+
+                if (isset($_GET['clientFilter']) && $_GET['clientFilter'] !== '') {
+                    $client_filter = $_GET['clientFilter'];
+                    $matches_client = stripos($item['code'], $client_filter) !== false;
+
+                    return $matches_client && $matches_search;
+                }
+
+                return $matches_search;
+            });
+        }
+
+        $values = array_merge($values, $filtered_additional);
         foreach ($values as $val) {
             // make sure result is escaped..
             $code = \REDCap::escapeHtml($val['code']);
             $desc = \REDCap::escapeHtml($val['display']);
             $results[$code] = $desc;
         }
+
         $result_limit = (is_numeric($result_limit) ? $result_limit : 30);
 
         if (count($results) === 0)

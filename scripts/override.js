@@ -32,10 +32,12 @@ const OverrideHelper = {
     parseTag: (text) => {
         try {
             let tag = text.substring(text.lastIndexOf('[')+1, text.lastIndexOf(']'));
-            let rest = text.substring(text.lastIndexOf(']') + 1 , text.length - 1);
-            let roomID = tag.split('-')[3];
+            let rest = text.substring(text.lastIndexOf(']') + 1 , text.length);
+            let roomID = tag.split('-').pop();
+            let cleaned = rest.replace(/\s*\([^)]*\)\s*/g, '');
+
             if(roomID)
-                return `[${roomID}] ${rest}`;
+                return `[${roomID}] ${cleaned}`;
             return text
         } catch (e) {
             return null;
@@ -44,7 +46,6 @@ const OverrideHelper = {
 
     verifyActionTags: () => {
         //Injected via php before page load
-
         if(actionTagTable){
             for(const key of Object.keys(actionTagTable)){
                 let roomPageElement = $(`#${key}-autosuggest`);
