@@ -69,8 +69,20 @@ const OverrideHelper = {
     },
 
     overwriteAutocomplete: (buildingField, roomPageElement) => {
-        let buildingID = ($(`input[name=${buildingField}]`).val());
-        $(roomPageElement).autocomplete( "option", "source", `${OverrideHelper.baseSourceField}&clientFilter=${buildingID}`)
+        let buildingPageElement = $(`#${buildingField}-autosuggest`);
+        let buildingID = $(`input[name=${buildingField}]`).val();
+        let newSource = `${OverrideHelper.baseSourceField}&clientFilter=${buildingID}`;
+
+        $(roomPageElement).autocomplete("option", {
+            source: newSource,
+            delay: 500, // 2000 ms = 2 seconds
+            minLength: 2 // Optional: start suggesting after at least 1 character
+        });
+
+        $(buildingPageElement).autocomplete("option", {
+            delay: 500,
+            minLength: 2
+        });
     }
 }
 
