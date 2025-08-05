@@ -204,6 +204,7 @@ class LBRE extends AbstractExternalModule implements \OntologyProvider
      */
     public function getQueryUrl($category, $search_term, $filter)
     {
+        $search_term = strtolower($search_term);
         $pSettings = $this->getProjectSettings();
         $sSettings = $this->getSystemSettings();
 
@@ -248,7 +249,7 @@ class LBRE extends AbstractExternalModule implements \OntologyProvider
 
         if (isset($pSettings['result-count'])) {
             $count = $pSettings['result-count'];
-            $url .= "&perPage=$count";
+            $url .= "&perPage=1000";
             return $url;
         } else {
             return $url;
@@ -282,7 +283,8 @@ class LBRE extends AbstractExternalModule implements \OntologyProvider
      */
     public function searchOntology($category, $search_term, $result_limit)
     {
-        $res = $this->sendQuery($category, $search_term, $_GET['clientFilter'] ?? null);
+        $pSettings = $this->getProjectSettings();
+        $res = $this->sendQuery($category, strtolower($search_term), $_GET['clientFilter'] ?? null);
         $values = array();
 
         if (strtolower($category) === 'buildings') {
@@ -356,7 +358,7 @@ class LBRE extends AbstractExternalModule implements \OntologyProvider
             $results['__NR__'] = 'No Results';
 
         // Return array of results
-        return array_slice($results, 0, $result_limit, true);
+        return array_slice($results, 0, $pSettings['result-count'], true);
     }
 
     /**
